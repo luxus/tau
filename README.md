@@ -1,136 +1,138 @@
-# Pi Web UI
+# Tau
 
-A web-based chat interface for Pi coding agent using the RPC protocol.
+A web UI that mirrors your [Pi](https://github.com/badlogic/pi-mono) terminal session in the browser. No separate server — it runs as a Pi extension inside your existing process.
 
-## Features
+![Tau dark mode](docs/images/dark.png)
 
-- 💬 Real-time chat interface with streaming responses
-- 🔧 Tool execution visualization with live output
-- 📡 WebSocket communication for instant updates
-- 🎨 Clean, dark-themed UI
-- 🔄 Automatic reconnection handling
-- 🪟 Extension UI dialog support (select, confirm, input, editor)
+## What it does
 
-## Architecture
+Tau connects to your running Pi TUI and gives you a second view in the browser. Same session, same messages, same tools — just a different screen. Type in the terminal or the browser, both stay in sync.
 
-```
-Browser (WebSocket) ↔ Express Server ↔ Pi subprocess (RPC mode)
-```
+- **Live mirroring** — streams messages, tool calls, and thinking blocks in real-time
+- **Works on any device** — open it on your phone, tablet, or another monitor
+- **Session browser** — view history from any past session
+- **No extra process** — the Pi extension *is* the server
 
-- **Backend**: Node.js with Express and WebSocket server
-- **Frontend**: Vanilla JavaScript (ES modules)
-- **Pi Integration**: Spawns `pi --mode rpc --no-session` subprocess
-- **Protocol**: JSON-lines over stdin/stdout
-
-## Installation
+## Install
 
 ```bash
-npm install
+pi install npm:tau-mirror
 ```
 
-## Development
-
-Build TypeScript and run server:
+Or from git:
 
 ```bash
-npm run dev
-```
-
-Or build and run separately:
-
-```bash
-npm run build
-npm start
+pi install git:github.com/mattkennelly/tau
 ```
 
 ## Usage
 
-1. Start the server: `npm run dev`
-2. Open browser: http://localhost:3000
-3. Start chatting with Pi!
+1. Start Pi normally in your terminal
+2. Open the URL shown in the status bar (default: `http://localhost:3001`)
+3. That's it
 
-The interface will show:
-- Your messages in green on the right
-- Pi's responses in blue on the left
-- Tool executions as expandable cards showing arguments and results
-- Streaming text as it's generated token by token
+On your phone, type `/qr` in the terminal to show a QR code.
 
-## Key Bindings
+![QR code](docs/images/qr.png)
 
-- **Enter** - Send message
-- **Abort button** (when streaming) - Stop the agent
+## Screenshots
 
-## Extension UI Support
+### Dark mode
 
-The interface handles extension UI requests from Pi:
-- **Select dialogs** - Choose from a list of options
-- **Confirm dialogs** - Yes/No prompts
-- **Input dialogs** - Free-form text input
-- **Editor dialogs** - Multi-line text editing
-- **Notifications** - Toast-style messages
+![Dark mode](docs/images/dark.png)
 
-## Project Structure
+### Light mode
 
-```
-pi-web-ui/
-├── src/
-│   └── backend/
-│       ├── types.ts          # TypeScript types for RPC protocol
-│       ├── rpc-manager.ts    # Spawns and manages Pi subprocess
-│       ├── websocket-handler.ts  # WebSocket connection management
-│       └── server.ts         # Express server entry point
-├── public/
-│   ├── index.html           # HTML shell
-│   ├── style.css            # Styling
-│   ├── app.js               # Main application logic
-│   ├── websocket-client.js  # WebSocket client
-│   ├── state.js             # State management
-│   ├── message-renderer.js  # Message rendering
-│   ├── tool-card.js         # Tool execution cards
-│   └── dialogs.js           # Extension UI dialogs
-├── dist/                    # Compiled TypeScript
-├── package.json
-├── tsconfig.json
-└── README.md
-```
+![Light mode](docs/images/light.png)
+
+### Mobile
+
+![Mobile](docs/images/mobile.png)
+
+### Image attachments (mobile)
+
+![Attach](docs/images/mobile-attach.png)
+
+### Session browser
+
+![Sessions](docs/images/sessions.png)
+
+### Settings
+
+![Settings](docs/images/settings.png)
+
+## Features
+
+### Chat
+- Full markdown rendering with syntax-highlighted code blocks
+- Streaming responses with typing indicator
+- Image attachments (paste, drag & drop, or button)
+- Copy any message with one click
+- Scroll-to-bottom button with new message indicator
+
+### Session management
+- Browse all past sessions grouped by project
+- Sorted by last modified (most recent first)
+- Live session marked with a green dot
+- Historical sessions are read-only
+- Inline session rename
+
+### Model & thinking
+- Model picker with all available models
+- Cycle model and thinking level from the input area
+- Token usage percentage with warning/critical states
+- Cost display per session
+
+### Commands
+- Command palette (Export HTML, Session Stats)
+- All commands sent through the same Pi process
+
+### Appearance
+- Dark and light mode
+- Follows system preference by default
+- Glassmorphism design with warm earthy accents
+
+### Mobile
+- Responsive layout
+- Sidebar collapsed by default on small screens
+- Handles iOS Safari viewport correctly
 
 ## Configuration
 
-The server listens on port 3000 by default. Change this with the `PORT` environment variable:
+Environment variables (set before starting Pi):
 
-```bash
-PORT=8080 npm start
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TAU_MIRROR_PORT` | `3001` | Server port |
+| `TAU_STATIC_DIR` | *(bundled)* | Override static files path |
+
+## How it works
+
+Tau is a [Pi extension](https://github.com/badlogic/pi-mono#extensions) that starts an HTTP + WebSocket server inside the Pi process. The extension subscribes to all Pi events and forwards them to connected browser clients. Commands from the browser are executed via the extension API against the same agent session.
+
+```
+┌─────────────┐     ┌──────────────────────────────┐     ┌─────────────┐
+│  Pi TUI     │     │  Pi Process                  │     │  Browser    │
+│  (terminal) │◄───►│                              │◄───►│  (Tau)      │
+│             │     │  tau extension               │     │             │
+└─────────────┘     │    ↳ HTTP + WS on :3001      │     └─────────────┘
+                    └──────────────────────────────┘
 ```
 
-## Troubleshooting
+There's no separate server to run. The extension auto-loads when Pi starts and shuts down when Pi exits.
 
-**Pi process exits immediately:**
-- Make sure `pi` is in your PATH
-- Check stderr output in the server logs
+## Development
 
-**WebSocket connection fails:**
-- Ensure the server is running on the expected port
-- Check browser console for connection errors
+Clone and point the extension at the local static files:
 
-**No messages appearing:**
-- Open browser DevTools console to check for JavaScript errors
-- Verify WebSocket connection in Network tab
+```bash
+git clone https://github.com/mattkennelly/tau.git
+cd tau
+TAU_STATIC_DIR=$(pwd)/public pi
+```
 
-## Development Notes
+Edit the files in `public/` — refresh the browser to see changes.
 
-- Frontend uses vanilla JavaScript (ES modules) - no build step needed
-- Backend is TypeScript compiled to CommonJS
-- WebSocket messages use JSON format
-- RPC events are forwarded directly to connected clients
-- Tool executions are tracked by `toolCallId`
+## License
 
-## Future Enhancements
-
-- [ ] Session persistence (save/load conversations)
-- [ ] Model selector in UI
-- [ ] Message history limits/compaction triggers
-- [ ] Syntax highlighting for code in messages
-- [ ] File upload support for images
-- [ ] Export conversation as HTML/markdown
-- [ ] Theme customization
-- [ ] Multiple conversation threads
+MIT

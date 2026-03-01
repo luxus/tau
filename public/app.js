@@ -38,14 +38,26 @@ const refreshSessionsBtn = document.getElementById('refresh-sessions-btn');
 const sessionSearchInput = document.getElementById('session-search-input');
 const typingIndicator = document.getElementById('typing-indicator');
 const sessionCostEl = document.getElementById('session-cost');
+const tokenUsageEl = document.getElementById('token-usage');
+const scrollBottomBtn = document.getElementById('scroll-bottom-btn');
+const scrollBottomBadge = document.getElementById('scroll-bottom-badge');
+const messagesContainer = document.getElementById('messages');
 
 // State tracking
 let currentStreamingElement = null;
 let currentStreamingText = '';
 let sessionTotalCost = 0;
+let lastInputTokens = 0;
+let contextWindowSize = 0;  // fetched from model info
 let originalTitle = document.title;
 let hasFocus = true;
 let unreadCount = 0;
+let isScrolledUp = false;
+let hasNewWhileScrolled = false;
+let lastSentMessage = null; // Track to avoid duplicate rendering in mirror mode
+let mirrorActiveSessionFile = null; // The live session file path from the TUI
+let viewingActiveSession = true; // Whether we're viewing the live session or a historical one
+let isMirrorMode = false; // Set when mirror_sync received
 
 
 // ═══════════════════════════════════════
@@ -63,11 +75,45 @@ window.addEventListener('blur', () => {
 });
 
 // ═══════════════════════════════════════
+// Scroll-to-bottom button + new message indicator
+// ═══════════════════════════════════════
+
+messagesContainer.addEventListener('scroll', () => {
+  const threshold = 150;
+  const atBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight < threshold;
+  isScrolledUp = !atBottom;
+  
+  if (atBottom) {
+    scrollBottomBtn.classList.add('hidden');
+    scrollBottomBadge.classList.add('hidden');
+    hasNewWhileScrolled = false;
+  } else {
+    scrollBottomBtn.classList.remove('hidden');
+  }
+});
+
+scrollBottomBtn.addEventListener('click', () => {
+  messagesContainer.scrollTo({ top: messagesContainer.scrollHeight, behavior: 'smooth' });
+  scrollBottomBtn.classList.add('hidden');
+  scrollBottomBadge.classList.add('hidden');
+  hasNewWhileScrolled = false;
+});
+
+function showNewMessageBadge() {
+  if (isScrolledUp) {
+    hasNewWhileScrolled = true;
+    scrollBottomBadge.classList.remove('hidden');
+  }
+}
+
+// ═══════════════════════════════════════
 // WebSocket event handlers
 // ═══════════════════════════════════════
 
 wsClient.addEventListener('connected', () => {
   updateConnectionStatus('connected');
+  // Fetch model context window size for token % display
+  setTimeout(fetchContextWindow, 1000);
 });
 
 wsClient.addEventListener('disconnected', () => {
@@ -85,6 +131,11 @@ wsClient.addEventListener('rpcEvent', (e) => {
 
 wsClient.addEventListener('serverError', (e) => {
   messageRenderer.renderError(e.detail.message);
+});
+
+// Mirror mode: receive full state snapshot on connect
+wsClient.addEventListener('mirrorSync', (e) => {
+  handleMirrorSync(e.detail);
 });
 
 // ═══════════════════════════════════════
@@ -154,7 +205,25 @@ function handleMessageStart(message) {
       { content: '' },
       true
     );
+  } else if (message.role === 'user') {
+    // In mirror mode, user messages from TUI appear via events
+    // Only render if we didn't just send this message ourselves
+    if (!lastSentMessage || getMessageText(message) !== lastSentMessage) {
+      const content = getMessageText(message);
+      if (content) {
+        messageRenderer.renderUserMessage({ content });
+      }
+    }
+    lastSentMessage = null;
   }
+}
+
+function getMessageText(message) {
+  if (typeof message.content === 'string') return message.content;
+  if (Array.isArray(message.content)) {
+    return message.content.filter(b => b.type === 'text').map(b => b.text).join('\n');
+  }
+  return '';
 }
 
 function handleMessageUpdate(event) {
@@ -179,11 +248,16 @@ function handleMessageEnd(message) {
     messageRenderer.finalizeStreamingMessage(currentStreamingElement, usage);
     currentStreamingElement = null;
 
-    // Track session cost
+    // Track session cost and tokens
     if (usage?.cost?.total) {
       sessionTotalCost += usage.cost.total;
-      updateCostDisplay();
     }
+    if (usage?.input) {
+      lastInputTokens = usage.input + (usage.cacheRead || 0);
+    }
+    updateCostDisplay();
+    updateTokenUsage();
+    showNewMessageBadge();
   }
 }
 
@@ -285,19 +359,114 @@ messageInput.addEventListener('input', () => {
   messageInput.style.height = Math.min(messageInput.scrollHeight, 200) + 'px';
 });
 
+// ═══════════════════════════════════════
+// Image attachment
+// ═══════════════════════════════════════
+
+const attachBtn = document.getElementById('attach-btn');
+const imageInput = document.getElementById('image-input');
+const imagePreviews = document.getElementById('image-previews');
+let pendingImages = []; // Array of { data: base64, mimeType: string }
+
+attachBtn.addEventListener('click', () => imageInput.click());
+
+imageInput.addEventListener('change', () => {
+  for (const file of imageInput.files) {
+    if (!file.type.startsWith('image/')) continue;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result.split(',')[1];
+      pendingImages.push({ data: base64, mimeType: file.type });
+      renderImagePreviews();
+    };
+    reader.readAsDataURL(file);
+  }
+  imageInput.value = '';
+});
+
+// Drag & drop on input
+messageInput.addEventListener('dragover', (e) => { e.preventDefault(); });
+messageInput.addEventListener('drop', (e) => {
+  e.preventDefault();
+  for (const file of e.dataTransfer.files) {
+    if (!file.type.startsWith('image/')) continue;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result.split(',')[1];
+      pendingImages.push({ data: base64, mimeType: file.type });
+      renderImagePreviews();
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
+// Paste images
+messageInput.addEventListener('paste', (e) => {
+  for (const item of e.clipboardData.items) {
+    if (!item.type.startsWith('image/')) continue;
+    const file = item.getAsFile();
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result.split(',')[1];
+      pendingImages.push({ data: base64, mimeType: file.type });
+      renderImagePreviews();
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
+function renderImagePreviews() {
+  imagePreviews.innerHTML = '';
+  if (pendingImages.length === 0) {
+    imagePreviews.classList.add('hidden');
+    return;
+  }
+  imagePreviews.classList.remove('hidden');
+  pendingImages.forEach((img, i) => {
+    const el = document.createElement('div');
+    el.className = 'image-preview';
+    el.innerHTML = `
+      <img src="data:${img.mimeType};base64,${img.data}" />
+      <button class="image-preview-remove" data-index="${i}">✕</button>
+    `;
+    el.querySelector('.image-preview-remove').addEventListener('click', () => {
+      pendingImages.splice(i, 1);
+      renderImagePreviews();
+    });
+    imagePreviews.appendChild(el);
+  });
+}
+
+// ═══════════════════════════════════════
+// Send message (with images)
+// ═══════════════════════════════════════
+
 function sendMessage() {
   const message = messageInput.value.trim();
   if (!message || state.isStreaming) return;
 
+  lastSentMessage = message;
   messageRenderer.renderUserMessage({ content: message });
 
   messageInput.value = '';
   messageInput.style.height = 'auto';
 
-  wsClient.send({
+  const cmd = {
     type: 'prompt',
     message,
-  });
+  };
+
+  if (pendingImages.length > 0) {
+    cmd.images = pendingImages.map(img => ({
+      type: 'image',
+      data: img.data,
+      mimeType: img.mimeType,
+    }));
+    pendingImages = [];
+    renderImagePreviews();
+  }
+
+  wsClient.send(cmd);
 }
 
 abortBtn.addEventListener('click', () => {
@@ -307,12 +476,221 @@ abortBtn.addEventListener('click', () => {
 });
 
 // ═══════════════════════════════════════
+// Command Palette
+// ═══════════════════════════════════════
+
+const commandBtn = document.getElementById('command-btn');
+const commandPalette = document.getElementById('command-palette');
+const commandPaletteOverlay = document.getElementById('command-palette-overlay');
+const commandList = document.getElementById('command-list');
+
+const commands = [
+  { icon: '📋', label: 'Export HTML', desc: 'Export session as HTML file', action: () => rpcExportHtml() },
+  { icon: '📊', label: 'Session Stats', desc: 'Show session statistics', action: () => showSessionStats() },
+];
+
+// Cycle model button
+document.getElementById('cycle-model-btn').addEventListener('click', async () => {
+  await rpcCommand({ type: 'cycle_model' }, 'Switching model...');
+  await fetchModelInfo();
+});
+
+// Cycle thinking button
+document.getElementById('cycle-thinking-btn').addEventListener('click', async () => {
+  const data = await rpcCommand({ type: 'cycle_thinking_level' }, 'Cycling thinking...');
+  if (data?.success && data.data?.level) {
+    statusText.textContent = `Thinking: ${data.data.level}`;
+    setTimeout(() => { statusText.textContent = 'Connected'; }, 2000);
+  }
+});
+
+function openCommandPalette() {
+  commandList.innerHTML = '';
+  commands.forEach(cmd => {
+    const el = document.createElement('div');
+    el.className = 'command-item';
+    el.innerHTML = `
+      <div class="command-icon">${cmd.icon}</div>
+      <div>
+        <div class="command-label">${cmd.label}</div>
+        <div class="command-desc">${cmd.desc}</div>
+      </div>
+    `;
+    el.addEventListener('click', () => {
+      closeCommandPalette();
+      cmd.action();
+    });
+    commandList.appendChild(el);
+  });
+  commandPalette.classList.remove('hidden');
+  commandPaletteOverlay.classList.remove('hidden');
+}
+
+function closeCommandPalette() {
+  commandPalette.classList.add('hidden');
+  commandPaletteOverlay.classList.add('hidden');
+}
+
+commandBtn.addEventListener('click', openCommandPalette);
+commandPaletteOverlay.addEventListener('click', closeCommandPalette);
+
+async function rpcCommand(cmd, statusMsg) {
+  try {
+    if (statusMsg) statusText.textContent = statusMsg;
+    const resp = await fetch('/api/rpc', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cmd),
+    });
+    const data = await resp.json();
+    if (data.success) {
+      statusText.textContent = 'Done';
+      setTimeout(() => { statusText.textContent = 'Connected'; }, 2000);
+    } else {
+      statusText.textContent = data.error || 'Failed';
+      setTimeout(() => { statusText.textContent = 'Connected'; }, 3000);
+    }
+    return data;
+  } catch (e) {
+    statusText.textContent = 'Error';
+    setTimeout(() => { statusText.textContent = 'Connected'; }, 3000);
+  }
+}
+
+async function rpcExportHtml() {
+  const data = await rpcCommand({ type: 'export_html' }, 'Exporting...');
+  if (data?.success && data.data?.path) {
+    statusText.textContent = `Exported: ${data.data.path}`;
+    setTimeout(() => { statusText.textContent = 'Connected'; }, 4000);
+  }
+}
+
+async function showSessionStats() {
+  const data = await rpcCommand({ type: 'get_session_stats' }, 'Loading stats...');
+  if (data?.success && data.data) {
+    const s = data.data;
+    const msg = [
+      `Messages: ${s.totalMessages} (${s.userMessages} user, ${s.assistantMessages} assistant)`,
+      `Tool calls: ${s.toolCalls}`,
+      `Tokens: ${s.tokens.total.toLocaleString()} (in: ${s.tokens.input.toLocaleString()}, out: ${s.tokens.output.toLocaleString()}, cache: ${s.tokens.cacheRead.toLocaleString()})`,
+      `Cost: $${s.cost.toFixed(4)}`,
+    ].join('\n');
+    messageRenderer.renderSystemMessage(msg);
+  }
+}
+
+// ═══════════════════════════════════════
+// Model Picker
+// ═══════════════════════════════════════
+
+const modelBtn = document.getElementById('model-btn');
+const modelPicker = document.getElementById('model-picker');
+const modelPickerOverlay = document.getElementById('model-picker-overlay');
+const modelListEl = document.getElementById('model-list');
+let currentModelId = '';
+let availableModels = [];
+
+async function fetchModelInfo() {
+  try {
+    const [modelsResp, stateResp] = await Promise.all([
+      fetch('/api/rpc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'get_available_models' }) }),
+      fetch('/api/rpc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'get_state' }) }),
+    ]);
+    const modelsData = await modelsResp.json();
+    const stateData = await stateResp.json();
+
+    if (modelsData.success && modelsData.data?.models) {
+      availableModels = modelsData.data.models;
+    }
+    if (stateData.success && stateData.data?.model) {
+      currentModelId = stateData.data.model.id || '';
+      const shortName = currentModelId.replace(/^claude-/, '').replace(/-\d{8}$/, '');
+      modelBtn.textContent = shortName || 'model';
+
+      // Update context window
+      const model = availableModels.find(m => m.id === currentModelId);
+      if (model?.contextWindow) {
+        contextWindowSize = model.contextWindow;
+        updateTokenUsage();
+      }
+    }
+  } catch (e) {
+    modelBtn.textContent = 'model';
+  }
+}
+
+function openModelPicker() {
+  modelListEl.innerHTML = '';
+  if (availableModels.length === 0) {
+    modelListEl.innerHTML = '<div style="padding:12px;color:var(--text-dim);font-size:12px">Loading models...</div>';
+    fetchModelInfo().then(() => {
+      if (availableModels.length > 0) renderModelList();
+    });
+  } else {
+    renderModelList();
+  }
+  modelPicker.classList.remove('hidden');
+  modelPickerOverlay.classList.remove('hidden');
+}
+
+function renderModelList() {
+  modelListEl.innerHTML = '';
+  availableModels.forEach(m => {
+    const el = document.createElement('div');
+    el.className = `model-item${m.id === currentModelId ? ' active' : ''}`;
+    const shortName = m.id.replace(/-\d{8}$/, '');
+    const ctxK = m.contextWindow ? `${(m.contextWindow / 1000).toFixed(0)}k` : '';
+    const providerLabel = m.provider && m.provider !== 'anthropic' ? m.provider : '';
+    el.innerHTML = `
+      <div>
+        <span class="model-item-name">${shortName}</span>
+        ${providerLabel ? `<span class="model-item-provider">${providerLabel}</span>` : ''}
+      </div>
+      <span class="model-item-context">${ctxK}</span>
+    `;
+    el.addEventListener('click', async () => {
+      closeModelPicker();
+      await rpcCommand({ type: 'set_model', provider: m.provider, modelId: m.id }, `Switching to ${shortName}...`);
+      currentModelId = m.id;
+      const display = m.id.replace(/^claude-/, '').replace(/-\d{8}$/, '');
+      modelBtn.textContent = display;
+      if (m.contextWindow) {
+        contextWindowSize = m.contextWindow;
+        updateTokenUsage();
+      }
+    });
+    modelListEl.appendChild(el);
+  });
+}
+
+function closeModelPicker() {
+  modelPicker.classList.add('hidden');
+  modelPickerOverlay.classList.add('hidden');
+}
+
+modelBtn.addEventListener('click', openModelPicker);
+modelPickerOverlay.addEventListener('click', closeModelPicker);
+
+// ═══════════════════════════════════════
 // Keyboard shortcuts
 // ═══════════════════════════════════════
 
 document.addEventListener('keydown', (e) => {
   // Escape — Abort streaming, or close sidebar on mobile
   if (e.key === 'Escape') {
+    // Close palettes/panels first
+    if (!settingsPanel.classList.contains('hidden')) {
+      closeSettings();
+      return;
+    }
+    if (!commandPalette.classList.contains('hidden')) {
+      closeCommandPalette();
+      return;
+    }
+    if (!modelPicker.classList.contains('hidden')) {
+      closeModelPicker();
+      return;
+    }
     if (state.isStreaming) {
       wsClient.send({ type: 'abort' });
       messageRenderer.renderError('Aborted by user');
@@ -356,6 +734,7 @@ refreshSessionsBtn.addEventListener('click', () => {
   refreshSessionsBtn.classList.add('spinning');
   sidebar.loadSessions().then(() => {
     setTimeout(() => refreshSessionsBtn.classList.remove('spinning'), 600);
+    if (isMirrorMode) updateMirrorLiveIndicator();
   });
 });
 
@@ -366,7 +745,9 @@ sessionSearchInput.addEventListener('input', () => {
 
 async function newSession() {
   sessionTotalCost = 0;
+  lastInputTokens = 0;
   updateCostDisplay();
+  updateTokenUsage();
   await switchSession(null);
   sidebar.clearActive();
   messageInput.focus();
@@ -375,7 +756,9 @@ async function newSession() {
 async function handleSessionSelect(session, project) {
   sidebar.setActive(session.filePath);
   sessionTotalCost = 0;
+  lastInputTokens = 0;
   updateCostDisplay();
+  updateTokenUsage();
   await switchSession(session.filePath, session, project);
 
   // Close sidebar on mobile after selecting
@@ -417,19 +800,93 @@ async function switchSession(sessionFile, session = null, project = null) {
       messageRenderer.renderWelcome();
     }
 
-    const res = await fetch('/api/sessions/switch', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionFile }),
-    });
+    // In mirror mode, don't actually switch the Pi process
+    if (isMirrorMode) {
+      // Check if this is the active session
+      viewingActiveSession = sessionFile === mirrorActiveSessionFile;
+      updateMirrorInputState();
 
-    if (!res.ok) {
-      const err = await res.json();
-      messageRenderer.renderError(`Failed to switch session: ${err.error}`);
+      if (viewingActiveSession) {
+        // Re-request live state from the extension
+        wsClient.send({ type: 'mirror_sync_request' });
+      }
+    } else {
+      const res = await fetch('/api/sessions/switch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionFile }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        messageRenderer.renderError(`Failed to switch session: ${err.error}`);
+      }
     }
   } catch (error) {
     console.error('[App] Failed to switch session:', error);
     messageRenderer.renderError('Failed to switch session');
+  }
+}
+
+// ═══════════════════════════════════════
+// Mirror mode sync
+// ═══════════════════════════════════════
+
+function handleMirrorSync(data) {
+  console.log('[Mirror] Received state snapshot:', data.entries?.length, 'entries');
+  isMirrorMode = true;
+
+  // Track the active session
+  mirrorActiveSessionFile = data.sessionFile || null;
+  viewingActiveSession = true;
+  updateMirrorInputState();
+  updateMirrorLiveIndicator();
+
+  // Update model display
+  if (data.model) {
+    const shortName = data.model.name || data.model.id || 'unknown';
+    const modelBtn = document.getElementById('model-btn');
+    if (modelBtn) modelBtn.textContent = shortName;
+    if (data.model.contextWindow) {
+      contextWindowSize = data.model.contextWindow;
+    }
+  }
+
+  // Clear and render message history
+  messageRenderer.clear();
+  sessionTotalCost = 0;
+  lastInputTokens = 0;
+
+  if (data.entries && data.entries.length > 0) {
+    renderSessionHistory(data.entries);
+  } else {
+    messageRenderer.renderWelcome();
+  }
+
+  updateCostDisplay();
+  updateTokenUsage();
+}
+
+// Mark the live session in the sidebar with a green dot
+function updateMirrorLiveIndicator() {
+  document.querySelectorAll('.session-item').forEach(el => {
+    el.classList.toggle('mirror-live', el.dataset.filePath === mirrorActiveSessionFile);
+  });
+}
+
+// Enable/disable input based on whether we're viewing the live session
+function updateMirrorInputState() {
+  if (!isMirrorMode) return;
+
+  const inputArea = document.querySelector('.input-area');
+  if (viewingActiveSession) {
+    messageInput.disabled = false;
+    messageInput.placeholder = 'Message...';
+    inputArea?.classList.remove('mirror-readonly');
+  } else {
+    messageInput.disabled = true;
+    messageInput.placeholder = 'Viewing historical session (read-only)';
+    inputArea?.classList.add('mirror-readonly');
   }
 }
 
@@ -485,9 +942,12 @@ function renderSessionHistory(entries) {
           true
         );
 
-        // Track cost from history
+        // Track cost and tokens from history
         if (msg.usage?.cost?.total) {
           sessionTotalCost += msg.usage.cost.total;
+        }
+        if (msg.usage?.input) {
+          lastInputTokens = msg.usage.input + (msg.usage.cacheRead || 0);
         }
       }
 
@@ -516,6 +976,8 @@ function renderSessionHistory(entries) {
   console.log(`[History] DOM thinking-block count:`, document.querySelectorAll('.thinking-block').length);
 
   updateCostDisplay();
+  updateTokenUsage();
+  fetchContextWindow();
 
   // Force scroll to bottom after rendering all history
   const messagesEl = document.getElementById('messages');
@@ -534,11 +996,36 @@ function showTypingIndicator(show) {
 
 function updateCostDisplay() {
   if (sessionTotalCost > 0) {
-    sessionCostEl.textContent = `$${sessionTotalCost.toFixed(4)}`;
+    sessionCostEl.textContent = `$${sessionTotalCost.toFixed(4)} (sub)`;
     sessionCostEl.classList.add('visible');
   } else {
     sessionCostEl.classList.remove('visible');
   }
+}
+
+function updateTokenUsage() {
+  if (lastInputTokens > 0 && contextWindowSize > 0) {
+    const pct = Math.round((lastInputTokens / contextWindowSize) * 100);
+    tokenUsageEl.textContent = `${pct}%`;
+    tokenUsageEl.classList.add('visible');
+    tokenUsageEl.classList.remove('warning', 'critical');
+    if (pct >= 80) {
+      tokenUsageEl.classList.add('critical');
+    } else if (pct >= 60) {
+      tokenUsageEl.classList.add('warning');
+    }
+    tokenUsageEl.title = `Context: ${(lastInputTokens / 1000).toFixed(1)}k / ${(contextWindowSize / 1000).toFixed(0)}k tokens`;
+  } else if (lastInputTokens > 0) {
+    // No context window info yet, just show raw tokens
+    tokenUsageEl.textContent = `${(lastInputTokens / 1000).toFixed(1)}k`;
+    tokenUsageEl.classList.add('visible');
+    tokenUsageEl.classList.remove('warning', 'critical');
+  }
+}
+
+async function fetchContextWindow() {
+  // Delegate to fetchModelInfo which also updates the model button
+  await fetchModelInfo();
 }
 
 function updateConnectionStatus(status) {
@@ -588,14 +1075,18 @@ wsClient.addEventListener('sessionSwitch', () => {
 // Theme / Settings
 // ═══════════════════════════════════════
 
-import { themes, applyTheme, shuffleTheme, getCurrentTheme } from './themes.js';
+import { themes, applyTheme, getCurrentTheme } from './themes.js';
 
 const settingsBtn = document.getElementById('settings-btn');
 const settingsPanel = document.getElementById('settings-panel');
 const settingsOverlay = document.getElementById('settings-overlay');
 const settingsClose = document.getElementById('settings-close');
 const themeGrid = document.getElementById('theme-grid');
-const shuffleBtn = document.getElementById('shuffle-btn');
+
+
+const toggleAutoCompact = document.getElementById('toggle-auto-compact');
+const btnThinkingLevel = document.getElementById('btn-thinking-level');
+
 
 function buildThemeGrid() {
   themeGrid.innerHTML = '';
@@ -604,13 +1095,7 @@ function buildThemeGrid() {
   for (const [id, theme] of Object.entries(themes)) {
     const btn = document.createElement('button');
     btn.className = `theme-swatch${current === id ? ' active' : ''}`;
-    btn.innerHTML = `
-      <div class="swatch-colors">
-        <div class="swatch-dot" style="background: ${theme.vars['--bg-primary']}"></div>
-        <div class="swatch-dot" style="background: ${theme.vars['--accent']}"></div>
-      </div>
-      <span>${theme.name}</span>
-    `;
+    btn.innerHTML = `<span>${theme.name}</span>`;
     btn.addEventListener('click', () => {
       applyTheme(id);
       themeGrid.querySelectorAll('.theme-swatch').forEach(s => s.classList.remove('active'));
@@ -620,10 +1105,31 @@ function buildThemeGrid() {
   }
 }
 
-function openSettings() {
+async function openSettings() {
   buildThemeGrid();
   settingsPanel.classList.remove('hidden');
   settingsOverlay.classList.remove('hidden');
+
+  // Fetch current state for toggles
+  try {
+    const resp = await fetch('/api/rpc', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'get_state' }),
+    });
+    const data = await resp.json();
+    if (data.success && data.data) {
+      const s = data.data;
+      // Auto-compaction toggle
+      toggleAutoCompact.className = `settings-toggle${s.autoCompactionEnabled ? ' on' : ''}`;
+      // Thinking level
+      btnThinkingLevel.textContent = s.thinkingLevel || 'off';
+      // Session name
+      inputSessionName.value = s.sessionName || '';
+    }
+  } catch (e) {
+    // Silent
+  }
 }
 
 function closeSettings() {
@@ -635,25 +1141,42 @@ settingsBtn.addEventListener('click', openSettings);
 settingsClose.addEventListener('click', closeSettings);
 settingsOverlay.addEventListener('click', closeSettings);
 
-shuffleBtn.addEventListener('click', () => {
-  shuffleTheme();
-  themeGrid.querySelectorAll('.theme-swatch').forEach(s => s.classList.remove('active'));
+// Auto-compaction toggle
+toggleAutoCompact.addEventListener('click', async () => {
+  const isOn = toggleAutoCompact.classList.contains('on');
+  toggleAutoCompact.className = `settings-toggle${isOn ? '' : ' on'}`;
+  await rpcCommand({ type: 'set_auto_compaction', enabled: !isOn });
 });
+
+// Thinking level cycle
+btnThinkingLevel.addEventListener('click', async () => {
+  const data = await rpcCommand({ type: 'cycle_thinking_level' });
+  if (data?.success && data.data?.level) {
+    btnThinkingLevel.textContent = data.data.level;
+  }
+});
+
+
+
+
 
 // Restore saved theme
 const savedTheme = getCurrentTheme();
-if (savedTheme && savedTheme !== 'shuffled' && themes[savedTheme]) {
-  applyTheme(savedTheme);
-} else if (savedTheme === 'shuffled') {
-  shuffleTheme();
-}
+applyTheme(savedTheme);
 
 // ═══════════════════════════════════════
 // Initialize
 // ═══════════════════════════════════════
 
+// Collapse sidebar by default on mobile
+if (window.innerWidth <= 768) {
+  sidebarEl.classList.add('collapsed');
+}
+
 wsClient.connect();
 messageRenderer.renderWelcome();
-sidebar.loadSessions();
+sidebar.loadSessions().then(() => {
+  if (isMirrorMode) updateMirrorLiveIndicator();
+});
 
 console.log('🚀 Tau initialized');

@@ -1,446 +1,48 @@
 /**
- * Theme definitions — Apple-native inspired
+ * Theme system — dark / light mode only
  */
 
 export const themes = {
-  graphite: {
-    name: 'Graphite',
+  dark: {
+    name: 'Dark',
     dark: true,
-    vars: {
-      '--bg-primary': '#0e0d0c',
-      '--bg-secondary': '#151413',
-      '--bg-tertiary': '#1c1b19',
-      '--bg-hover': '#232220',
-      '--text-primary': '#c0bab2',
-      '--text-secondary': '#807a72',
-      '--text-dim': '#504c46',
-      '--accent': '#706a62',
-      '--accent-hover': '#807a72',
-      '--accent-subtle': 'rgba(112, 106, 98, 0.08)',
-      '--user-color': '#1e1d1c',
-      '--user-text': '#a09a92',
-      '--assistant-color': '#807a72',
-      '--tool-color': '#686460',
-      '--error-color': '#805050',
-      '--border': '#1a1918',
-      '--border-subtle': '#151413',
-      '--shadow': 'rgba(0, 0, 0, 0.8)',
-      '--shadow-lg': 'rgba(0, 0, 0, 0.95)',
-      '--code-bg': '#0a0908',
-      '--code-text': '#a09c96',
-      '--code-inline': '#908a82',
-      '--sidebar-bg': '#0a0908',
-      '--sidebar-text': '#686460',
-      '--sidebar-text-bright': '#a09c96',
-      '--sidebar-text-dim': '#3a3836',
-      '--sidebar-hover': 'rgba(255, 250, 240, 0.02)',
-      '--sidebar-active': 'rgba(96, 92, 86, 0.06)',
-    },
+    vars: {},  // Dark is the CSS default, no overrides needed
   },
-
-  snow: {
-    name: 'Snow',
+  light: {
+    name: 'Light',
     dark: false,
-    vars: {
-      '--bg-primary': '#ffffff',
-      '--bg-secondary': '#f5f5f7',
-      '--bg-tertiary': '#e8e8ed',
-      '--bg-hover': '#d1d1d6',
-      '--text-primary': '#1d1d1f',
-      '--text-secondary': '#6e6e73',
-      '--text-dim': '#aeaeb2',
-      '--accent': '#007aff',
-      '--accent-hover': '#0071e3',
-      '--accent-subtle': 'rgba(0, 122, 255, 0.08)',
-      '--user-color': '#007aff',
-      '--assistant-color': '#6e6e73',
-      '--tool-color': '#5856d6',
-      '--error-color': '#ff3b30',
-      '--border': '#d1d1d6',
-      '--border-subtle': '#e5e5ea',
-      '--shadow': 'rgba(0, 0, 0, 0.06)',
-      '--shadow-lg': 'rgba(0, 0, 0, 0.12)',
-      '--code-bg': '#f5f5f7',
-      '--code-text': '#1d1d1f',
-      '--code-inline': '#5856d6',
-      '--sidebar-bg': '#f5f5f7',
-      '--sidebar-text': '#6e6e73',
-      '--sidebar-text-bright': '#1d1d1f',
-      '--sidebar-text-dim': '#aeaeb2',
-      '--sidebar-hover': 'rgba(0, 0, 0, 0.04)',
-      '--sidebar-active': 'rgba(0, 122, 255, 0.1)',
-    },
-  },
-
-  midnight: {
-    name: 'Midnight',
-    dark: true,
-    vars: {
-      '--bg-primary': '#0d0d12',
-      '--bg-secondary': '#161620',
-      '--bg-tertiary': '#1e1e2a',
-      '--bg-hover': '#282836',
-      '--text-primary': '#e0e0e8',
-      '--text-secondary': '#7a7a90',
-      '--text-dim': '#45455a',
-      '--accent': '#bf8aff',
-      '--accent-hover': '#d0a4ff',
-      '--accent-subtle': 'rgba(191, 138, 255, 0.1)',
-      '--user-color': '#bf8aff',
-      '--assistant-color': '#7a7a90',
-      '--tool-color': '#5ac8fa',
-      '--error-color': '#ff6b6b',
-      '--border': '#252535',
-      '--border-subtle': '#1e1e2a',
-      '--shadow': 'rgba(0, 0, 0, 0.6)',
-      '--shadow-lg': 'rgba(0, 0, 0, 0.85)',
-      '--code-bg': '#0a0a10',
-      '--code-text': '#d0d0d8',
-      '--code-inline': '#bf8aff',
-      '--sidebar-bg': '#0a0a10',
-      '--sidebar-text': '#6a6a80',
-      '--sidebar-text-bright': '#d0d0d8',
-      '--sidebar-text-dim': '#35354a',
-      '--sidebar-hover': 'rgba(180, 180, 255, 0.04)',
-      '--sidebar-active': 'rgba(191, 138, 255, 0.12)',
-    },
-  },
-
-  paper: {
-    name: 'Paper',
-    dark: false,
-    vars: {
-      '--bg-primary': '#faf8f5',
-      '--bg-secondary': '#f0ede8',
-      '--bg-tertiary': '#e4e0da',
-      '--bg-hover': '#d8d4cc',
-      '--text-primary': '#2c2924',
-      '--text-secondary': '#6b665e',
-      '--text-dim': '#a8a39a',
-      '--accent': '#7a6a52',
-      '--accent-hover': '#8d7c64',
-      '--accent-subtle': 'rgba(122, 106, 82, 0.08)',
-      '--user-color': '#7a6a52',
-      '--assistant-color': '#6b665e',
-      '--tool-color': '#5a7a62',
-      '--error-color': '#c44040',
-      '--border': '#d4cfc6',
-      '--border-subtle': '#e4e0da',
-      '--shadow': 'rgba(44, 41, 36, 0.06)',
-      '--shadow-lg': 'rgba(44, 41, 36, 0.12)',
-      '--code-bg': '#f0ede8',
-      '--code-text': '#2c2924',
-      '--code-inline': '#7a6a52',
-      '--sidebar-bg': '#f0ede8',
-      '--sidebar-text': '#8a857c',
-      '--sidebar-text-bright': '#2c2924',
-      '--sidebar-text-dim': '#b8b3aa',
-      '--sidebar-hover': 'rgba(0, 0, 0, 0.03)',
-      '--sidebar-active': 'rgba(122, 106, 82, 0.1)',
-    },
-  },
-
-  ocean: {
-    name: 'Ocean',
-    dark: true,
-    vars: {
-      '--bg-primary': '#0c1520',
-      '--bg-secondary': '#13202e',
-      '--bg-tertiary': '#1c2d3e',
-      '--bg-hover': '#263a4e',
-      '--text-primary': '#d4e4f0',
-      '--text-secondary': '#6a8aa0',
-      '--text-dim': '#3a5568',
-      '--accent': '#30b0e0',
-      '--accent-hover': '#50c0f0',
-      '--accent-subtle': 'rgba(48, 176, 224, 0.1)',
-      '--user-color': '#30b0e0',
-      '--assistant-color': '#6a8aa0',
-      '--tool-color': '#34c759',
-      '--error-color': '#ff6060',
-      '--border': '#1c3040',
-      '--border-subtle': '#162838',
-      '--shadow': 'rgba(0, 8, 16, 0.6)',
-      '--shadow-lg': 'rgba(0, 8, 16, 0.85)',
-      '--code-bg': '#0a1018',
-      '--code-text': '#c4d4e0',
-      '--code-inline': '#30b0e0',
-      '--sidebar-bg': '#0a1018',
-      '--sidebar-text': '#5a7a90',
-      '--sidebar-text-bright': '#c4d4e0',
-      '--sidebar-text-dim': '#2a4858',
-      '--sidebar-hover': 'rgba(100, 180, 240, 0.04)',
-      '--sidebar-active': 'rgba(48, 176, 224, 0.12)',
-    },
-  },
-
-  rose: {
-    name: 'Rosé',
-    dark: false,
-    vars: {
-      '--bg-primary': '#fdf6f6',
-      '--bg-secondary': '#f5ecec',
-      '--bg-tertiary': '#ebe0e0',
-      '--bg-hover': '#e0d4d4',
-      '--text-primary': '#2d2226',
-      '--text-secondary': '#7a6068',
-      '--text-dim': '#b09aa0',
-      '--accent': '#c06080',
-      '--accent-hover': '#d07090',
-      '--accent-subtle': 'rgba(192, 96, 128, 0.08)',
-      '--user-color': '#c06080',
-      '--assistant-color': '#7a6068',
-      '--tool-color': '#8070a0',
-      '--error-color': '#cc4444',
-      '--border': '#e0d0d4',
-      '--border-subtle': '#ebe0e0',
-      '--shadow': 'rgba(45, 34, 38, 0.06)',
-      '--shadow-lg': 'rgba(45, 34, 38, 0.12)',
-      '--code-bg': '#f5ecec',
-      '--code-text': '#2d2226',
-      '--code-inline': '#c06080',
-      '--sidebar-bg': '#f5ecec',
-      '--sidebar-text': '#907078',
-      '--sidebar-text-bright': '#2d2226',
-      '--sidebar-text-dim': '#c0aab0',
-      '--sidebar-hover': 'rgba(0, 0, 0, 0.03)',
-      '--sidebar-active': 'rgba(192, 96, 128, 0.1)',
-    },
-  },
-
-  moss: {
-    name: 'Moss',
-    dark: true,
-    vars: {
-      '--bg-primary': '#101814',
-      '--bg-secondary': '#18221c',
-      '--bg-tertiary': '#222e28',
-      '--bg-hover': '#2c3a34',
-      '--text-primary': '#d0dcd6',
-      '--text-secondary': '#6a8878',
-      '--text-dim': '#3a5448',
-      '--accent': '#34c759',
-      '--accent-hover': '#50d470',
-      '--accent-subtle': 'rgba(52, 199, 89, 0.1)',
-      '--user-color': '#34c759',
-      '--assistant-color': '#6a8878',
-      '--tool-color': '#64d2ff',
-      '--error-color': '#ff6060',
-      '--border': '#1c3028',
-      '--border-subtle': '#1a2820',
-      '--shadow': 'rgba(0, 8, 4, 0.6)',
-      '--shadow-lg': 'rgba(0, 8, 4, 0.85)',
-      '--code-bg': '#0c140f',
-      '--code-text': '#c0d0c8',
-      '--code-inline': '#34c759',
-      '--sidebar-bg': '#0c140f',
-      '--sidebar-text': '#5a7868',
-      '--sidebar-text-bright': '#c0d0c8',
-      '--sidebar-text-dim': '#2a4438',
-      '--sidebar-hover': 'rgba(100, 220, 160, 0.04)',
-      '--sidebar-active': 'rgba(52, 199, 89, 0.12)',
-    },
-  },
-
-  sand: {
-    name: 'Sand',
-    dark: false,
-    vars: {
-      '--bg-primary': '#f8f5f0',
-      '--bg-secondary': '#ede9e2',
-      '--bg-tertiary': '#e0dbd2',
-      '--bg-hover': '#d4cec4',
-      '--text-primary': '#2e2a24',
-      '--text-secondary': '#706858',
-      '--text-dim': '#a8a090',
-      '--accent': '#b88a4c',
-      '--accent-hover': '#c89a5c',
-      '--accent-subtle': 'rgba(184, 138, 76, 0.08)',
-      '--user-color': '#b88a4c',
-      '--assistant-color': '#706858',
-      '--tool-color': '#5a8a6a',
-      '--error-color': '#c44040',
-      '--border': '#d0cab8',
-      '--border-subtle': '#e0dbd2',
-      '--shadow': 'rgba(46, 42, 36, 0.06)',
-      '--shadow-lg': 'rgba(46, 42, 36, 0.12)',
-      '--code-bg': '#ede9e2',
-      '--code-text': '#2e2a24',
-      '--code-inline': '#b88a4c',
-      '--sidebar-bg': '#ede9e2',
-      '--sidebar-text': '#8a8070',
-      '--sidebar-text-bright': '#2e2a24',
-      '--sidebar-text-dim': '#b8b0a0',
-      '--sidebar-hover': 'rgba(0, 0, 0, 0.03)',
-      '--sidebar-active': 'rgba(184, 138, 76, 0.1)',
-    },
-  },
-
-  slate: {
-    name: 'Slate',
-    dark: true,
-    vars: {
-      '--bg-primary': '#12161a',
-      '--bg-secondary': '#1a2028',
-      '--bg-tertiary': '#242c36',
-      '--bg-hover': '#2e3842',
-      '--text-primary': '#d4dae0',
-      '--text-secondary': '#6a7888',
-      '--text-dim': '#3a4858',
-      '--accent': '#5ac8fa',
-      '--accent-hover': '#78d4ff',
-      '--accent-subtle': 'rgba(90, 200, 250, 0.1)',
-      '--user-color': '#5ac8fa',
-      '--assistant-color': '#6a7888',
-      '--tool-color': '#30d158',
-      '--error-color': '#ff6060',
-      '--border': '#1e2830',
-      '--border-subtle': '#1a2028',
-      '--shadow': 'rgba(0, 4, 8, 0.6)',
-      '--shadow-lg': 'rgba(0, 4, 8, 0.85)',
-      '--code-bg': '#0e1216',
-      '--code-text': '#c4cad0',
-      '--code-inline': '#5ac8fa',
-      '--sidebar-bg': '#0e1216',
-      '--sidebar-text': '#5a6878',
-      '--sidebar-text-bright': '#c4cad0',
-      '--sidebar-text-dim': '#2a3848',
-      '--sidebar-hover': 'rgba(100, 180, 240, 0.04)',
-      '--sidebar-active': 'rgba(90, 200, 250, 0.12)',
-    },
-  },
-
-  ember: {
-    name: 'Ember',
-    dark: true,
-    vars: {
-      '--bg-primary': '#1a1210',
-      '--bg-secondary': '#241a16',
-      '--bg-tertiary': '#302420',
-      '--bg-hover': '#3c302a',
-      '--text-primary': '#e0d4cc',
-      '--text-secondary': '#907060',
-      '--text-dim': '#5a4438',
-      '--accent': '#ff9f0a',
-      '--accent-hover': '#ffb340',
-      '--accent-subtle': 'rgba(255, 159, 10, 0.1)',
-      '--user-color': '#ff9f0a',
-      '--assistant-color': '#907060',
-      '--tool-color': '#ffd60a',
-      '--error-color': '#ff453a',
-      '--border': '#2c2018',
-      '--border-subtle': '#241a16',
-      '--shadow': 'rgba(10, 4, 0, 0.6)',
-      '--shadow-lg': 'rgba(10, 4, 0, 0.85)',
-      '--code-bg': '#140e0c',
-      '--code-text': '#d0c4bc',
-      '--code-inline': '#ff9f0a',
-      '--sidebar-bg': '#140e0c',
-      '--sidebar-text': '#806050',
-      '--sidebar-text-bright': '#d0c4bc',
-      '--sidebar-text-dim': '#4a3830',
-      '--sidebar-hover': 'rgba(240, 180, 80, 0.04)',
-      '--sidebar-active': 'rgba(255, 159, 10, 0.12)',
-    },
+    vars: {},  // Light mode uses [data-theme="light"] in CSS
   },
 };
 
-/**
- * Apply a named theme
- */
 export function applyTheme(themeId) {
-  const theme = themes[themeId];
-  if (!theme) return;
-
   const root = document.documentElement;
-  root.removeAttribute('data-theme');
-
-  for (const [prop, value] of Object.entries(theme.vars)) {
-    root.style.setProperty(prop, value);
+  if (themeId === 'light') {
+    root.setAttribute('data-theme', 'light');
+  } else {
+    root.removeAttribute('data-theme');
   }
-
   localStorage.setItem('tau-theme', themeId);
 }
 
-/**
- * Generate a random theme
- */
-export function shuffleTheme() {
-  const isDark = Math.random() > 0.4;
-  const hue = Math.floor(Math.random() * 360);
-  const sat = 5 + Math.floor(Math.random() * 15);
-  const accentHue = (hue + 90 + Math.floor(Math.random() * 180)) % 360;
-  const accentSat = 60 + Math.floor(Math.random() * 30);
-
-  function hsl(h, s, l) { return `hsl(${h}, ${s}%, ${l}%)`; }
-  function hsla(h, s, l, a) { return `hsla(${h}, ${s}%, ${l}%, ${a})`; }
-
-  const vars = isDark ? {
-    '--bg-primary': hsl(hue, sat, 8),
-    '--bg-secondary': hsl(hue, sat, 12),
-    '--bg-tertiary': hsl(hue, sat, 17),
-    '--bg-hover': hsl(hue, sat, 22),
-    '--text-primary': hsl(hue, Math.floor(sat / 3), 90),
-    '--text-secondary': hsl(hue, Math.floor(sat / 2), 52),
-    '--text-dim': hsl(hue, Math.floor(sat / 2), 30),
-    '--accent': hsl(accentHue, accentSat, 60),
-    '--accent-hover': hsl(accentHue, accentSat + 10, 68),
-    '--accent-subtle': hsla(accentHue, accentSat, 60, 0.1),
-    '--user-color': hsl(accentHue, accentSat, 60),
-    '--assistant-color': hsl(hue, Math.floor(sat / 2), 52),
-    '--tool-color': hsl((accentHue + 120) % 360, 50, 55),
-    '--error-color': 'hsl(0, 80%, 62%)',
-    '--border': hsl(hue, sat, 15),
-    '--border-subtle': hsl(hue, sat, 12),
-    '--shadow': hsla(hue, sat, 2, 0.6),
-    '--shadow-lg': hsla(hue, sat, 2, 0.85),
-    '--code-bg': hsl(hue, sat, 5),
-    '--code-text': hsl(hue, Math.floor(sat / 3), 85),
-    '--code-inline': hsl(accentHue, accentSat, 60),
-    '--sidebar-bg': hsl(hue, sat, 5),
-    '--sidebar-text': hsl(hue, Math.floor(sat / 2), 45),
-    '--sidebar-text-bright': hsl(hue, Math.floor(sat / 3), 85),
-    '--sidebar-text-dim': hsl(hue, Math.floor(sat / 2), 25),
-    '--sidebar-hover': hsla(hue, 10, 80, 0.04),
-    '--sidebar-active': hsla(accentHue, accentSat, 60, 0.12),
-  } : {
-    '--bg-primary': hsl(hue, sat, 99),
-    '--bg-secondary': hsl(hue, sat, 95),
-    '--bg-tertiary': hsl(hue, sat, 89),
-    '--bg-hover': hsl(hue, sat, 83),
-    '--text-primary': hsl(hue, sat, 10),
-    '--text-secondary': hsl(hue, Math.floor(sat / 2), 42),
-    '--text-dim': hsl(hue, Math.floor(sat / 3), 66),
-    '--accent': hsl(accentHue, accentSat, 45),
-    '--accent-hover': hsl(accentHue, accentSat - 10, 38),
-    '--accent-subtle': hsla(accentHue, accentSat, 45, 0.08),
-    '--user-color': hsl(accentHue, accentSat, 45),
-    '--assistant-color': hsl(hue, Math.floor(sat / 2), 42),
-    '--tool-color': hsl((accentHue + 120) % 360, 40, 38),
-    '--error-color': 'hsl(0, 65%, 50%)',
-    '--border': hsl(hue, sat, 82),
-    '--border-subtle': hsl(hue, sat, 89),
-    '--shadow': hsla(hue, sat, 10, 0.06),
-    '--shadow-lg': hsla(hue, sat, 10, 0.12),
-    '--code-bg': hsl(hue, sat, 95),
-    '--code-text': hsl(hue, sat, 10),
-    '--code-inline': hsl(accentHue, accentSat, 45),
-    '--sidebar-bg': hsl(hue, sat, 95),
-    '--sidebar-text': hsl(hue, Math.floor(sat / 2), 50),
-    '--sidebar-text-bright': hsl(hue, sat, 10),
-    '--sidebar-text-dim': hsl(hue, Math.floor(sat / 3), 68),
-    '--sidebar-hover': hsla(0, 0, 0, 0.03),
-    '--sidebar-active': hsla(accentHue, accentSat, 50, 0.1),
-  };
-
-  const root = document.documentElement;
-  root.removeAttribute('data-theme');
-  for (const [prop, value] of Object.entries(vars)) {
-    root.style.setProperty(prop, value);
-  }
-  localStorage.setItem('tau-theme', 'shuffled');
+export function getCurrentTheme() {
+  const saved = localStorage.getItem('tau-theme');
+  if (saved) return saved;
+  // Auto-detect from OS
+  if (window.matchMedia?.('(prefers-color-scheme: light)').matches) return 'light';
+  return 'dark';
 }
 
-export function getCurrentTheme() {
-  return localStorage.getItem('tau-theme') || 'graphite';
+// Listen for OS theme changes if no explicit preference saved
+if (!localStorage.getItem('tau-theme')) {
+  window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
+    if (!localStorage.getItem('tau-theme')) {
+      const root = document.documentElement;
+      if (e.matches) {
+        root.setAttribute('data-theme', 'light');
+      } else {
+        root.removeAttribute('data-theme');
+      }
+    }
+  });
 }

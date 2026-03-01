@@ -94,6 +94,9 @@ export class WebSocketClient extends EventTarget {
       case 'session_switch':
         this.dispatchEvent(new CustomEvent('sessionSwitch'));
         break;
+      case 'mirror_sync':
+        this.dispatchEvent(new CustomEvent('mirrorSync', { detail: message }));
+        break;
       default:
         console.warn('[WS] Unknown message type:', message.type);
     }

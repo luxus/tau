@@ -1,6 +1,2 @@
 node_modules/
-dist/
 .DS_Store
-Tau/build/
-Tau/.build/
-*.js.map

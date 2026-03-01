@@ -44,7 +44,9 @@ export class MessageRenderer {
     div.className = `message user${isHistory ? ' history' : ''}`;
     div.innerHTML = `
       <div class="message-content">${this.escapeHtml(message.content)}</div>
+      <button class="message-copy-btn">Copy</button>
     `;
+    this._setupCopyBtn(div);
     this.container.appendChild(div);
     if (!isHistory) this.scrollToBottom();
   }
@@ -86,8 +88,10 @@ export class MessageRenderer {
     div.innerHTML = `
       <div class="message-content${streamingClass}">${contentHtml || '<em style="color: var(--text-dim)">Thinking...</em>'}</div>
       ${usageHtml}
+      ${!isStreaming ? '<button class="message-copy-btn">Copy</button>' : ''}
     `;
 
+    if (!isStreaming) this._setupCopyBtn(div);
     this.container.appendChild(div);
     if (!isHistory) this.scrollToBottom();
 
@@ -123,6 +127,15 @@ export class MessageRenderer {
       contentDiv.innerHTML = renderMarkdown(rawText);
     }
 
+    // Add copy button after streaming finishes
+    if (!messageElement.querySelector('.message-copy-btn')) {
+      const btn = document.createElement('button');
+      btn.className = 'message-copy-btn';
+      btn.textContent = 'Copy';
+      messageElement.appendChild(btn);
+      this._setupCopyBtn(messageElement);
+    }
+
     // Add usage info if available
     if (usage && usage.cost && usage.cost.total > 0) {
       if (!messageElement.querySelector('.message-usage')) {
@@ -148,6 +161,23 @@ export class MessageRenderer {
     div.textContent = `⚠️ ${errorMessage}`;
     this.container.appendChild(div);
     this.scrollToBottom();
+  }
+
+  _setupCopyBtn(messageEl) {
+    const btn = messageEl.querySelector('.message-copy-btn');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      const content = messageEl.querySelector('.message-content');
+      if (!content) return;
+      navigator.clipboard.writeText(content.textContent).then(() => {
+        btn.textContent = '✓';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'Copy';
+          btn.classList.remove('copied');
+        }, 1500);
+      });
+    });
   }
 
   escapeHtml(text) {

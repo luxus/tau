@@ -1,28 +1,15 @@
 {
-  "name": "pi-web-ui",
+  "name": "tau-mirror",
   "version": "1.0.0",
-  "description": "Web-based chat interface for Pi coding agent",
-  "main": "dist/backend/server.js",
-  "type": "commonjs",
-  "scripts": {
-    "build": "tsc",
-    "dev": "tsc && node dist/backend/server.js",
-    "start": "node dist/backend/server.js",
-    "watch": "tsc --watch",
-    "test": "node test-setup.js",
-    "clean": "rm -rf dist node_modules"
-  },
-  "keywords": ["pi", "coding-agent", "rpc", "chat", "web-ui"],
+  "description": "Web UI that mirrors your Pi terminal session in the browser",
+  "keywords": ["pi", "pi-package", "coding-agent", "web-ui", "mirror"],
   "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "express": "^4.18.2",
-    "ws": "^8.16.0"
+  "license": "MIT",
+  "pi": {
+    "extensions": ["./extensions/mirror-server.ts"]
   },
-  "devDependencies": {
-    "@types/express": "^4.17.21",
-    "@types/node": "^20.11.17",
-    "@types/ws": "^8.5.10",
-    "typescript": "^5.3.3"
+  "dependencies": {
+    "ws": "^8.16.0",
+    "qrcode": "^1.5.0"
   }
 }

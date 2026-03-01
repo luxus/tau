@@ -330,21 +330,32 @@ async function loadWorking(filename, viewerEl) {
 // Session Cards
 // ═══════════════════════════════════════
 
+let cardsFetching = false;
+let cardsObserver = null;
+let cardSort = 'date-desc';
+
 async function renderCards() {
   loadedCards = [];
   cardPage = 1;
+  cardsFetching = false;
 
   contentEl.innerHTML = `
     <div class="cards-header">
       <input type="text" class="cards-search" id="cards-search" placeholder="Search cards..." value="${escapeHtml(cardSearch)}" />
+      <select class="cards-sort" id="cards-sort">
+        <option value="date-desc" ${cardSort === 'date-desc' ? 'selected' : ''}>Newest first</option>
+        <option value="date-asc" ${cardSort === 'date-asc' ? 'selected' : ''}>Oldest first</option>
+        <option value="title-asc" ${cardSort === 'title-asc' ? 'selected' : ''}>Title A→Z</option>
+        <option value="title-desc" ${cardSort === 'title-desc' ? 'selected' : ''}>Title Z→A</option>
+      </select>
       <span class="cards-count" id="cards-count"></span>
     </div>
     <div class="card-grid" id="card-grid"></div>
-    <button class="load-more-btn hidden" id="load-more-btn">Load more</button>
+    <div class="scroll-sentinel" id="scroll-sentinel"></div>
   `;
 
   const searchInput = document.getElementById('cards-search');
-  const loadMoreBtn = document.getElementById('load-more-btn');
+  const sortSelect = document.getElementById('cards-sort');
 
   let searchTimeout;
   searchInput.addEventListener('input', () => {
@@ -353,25 +364,43 @@ async function renderCards() {
       cardSearch = searchInput.value;
       cardPage = 1;
       loadedCards = [];
+      document.getElementById('card-grid').innerHTML = '';
       fetchCards();
     }, 300);
   });
 
-  loadMoreBtn.addEventListener('click', () => {
-    cardPage++;
-    fetchCards(true);
+  sortSelect.addEventListener('change', () => {
+    cardSort = sortSelect.value;
+    cardPage = 1;
+    loadedCards = [];
+    document.getElementById('card-grid').innerHTML = '';
+    fetchCards();
   });
+
+  // Set up infinite scroll with IntersectionObserver
+  if (cardsObserver) cardsObserver.disconnect();
+  cardsObserver = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting && !cardsFetching && loadedCards.length < cardTotal) {
+      cardPage++;
+      fetchCards(true);
+    }
+  }, { rootMargin: '200px' });
+
+  const sentinel = document.getElementById('scroll-sentinel');
+  if (sentinel) cardsObserver.observe(sentinel);
 
   fetchCards();
 }
 
 async function fetchCards(append = false) {
+  if (cardsFetching) return;
+  cardsFetching = true;
+
   const grid = document.getElementById('card-grid');
   const countEl = document.getElementById('cards-count');
-  const loadMoreBtn = document.getElementById('load-more-btn');
 
   try {
-    const params = new URLSearchParams({ page: cardPage, limit: 30 });
+    const params = new URLSearchParams({ page: String(cardPage), limit: '50', sort: cardSort });
     if (cardSearch) params.set('search', cardSearch);
 
     const res = await fetch(`${API}/cards?${params}`);
@@ -381,29 +410,27 @@ async function fetchCards(append = false) {
     if (!append) loadedCards = [];
     loadedCards.push(...data.cards);
 
-    countEl.textContent = `${cardTotal} cards`;
+    countEl.textContent = `${loadedCards.length} of ${cardTotal} cards`;
 
     if (!append) grid.innerHTML = '';
 
     for (const card of data.cards) {
       const el = document.createElement('div');
       el.className = 'card-item';
-      const displayDate = card.sessionDate || card.modified;
+      const dateText = card.sessionDate ? formatDate(card.sessionDate) : '—';
       el.innerHTML = `
         <span class="card-title">${escapeHtml(card.title)}</span>
-        <span class="card-date">${formatDate(displayDate)}</span>
+        <span class="card-date">${dateText}</span>
       `;
       el.addEventListener('click', () => viewCard(card));
       grid.appendChild(el);
     }
-
-    if (loadedCards.length < cardTotal) {
-      loadMoreBtn.classList.remove('hidden');
-    } else {
-      loadMoreBtn.classList.add('hidden');
-    }
   } catch (e) {
-    grid.innerHTML = '<div style="padding: 12px; color: var(--error-color);">Failed to load</div>';
+    if (!append) {
+      grid.innerHTML = '<div style="padding: 12px; color: var(--error-color);">Failed to load</div>';
+    }
+  } finally {
+    cardsFetching = false;
   }
 }
 

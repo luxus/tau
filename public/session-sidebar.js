@@ -127,12 +127,56 @@ export class SessionSidebar {
         const time = this.formatTime(session.timestamp);
 
         item.innerHTML = `
-          <div class="session-title" title="${this.escapeHtml(title)}">${this.escapeHtml(title)}</div>
+          <div class="session-title-row">
+            <div class="session-title" title="${this.escapeHtml(title)}">${this.escapeHtml(title)}</div>
+            <button class="session-rename-btn" title="Rename">✎</button>
+          </div>
           <div class="session-meta">${time}</div>
         `;
 
-        item.addEventListener('click', () => {
+        item.addEventListener('click', (e) => {
+          if (e.target.closest('.session-rename-btn')) return;
           this.onSessionSelect(session, project);
+        });
+
+        item.querySelector('.session-rename-btn').addEventListener('click', (e) => {
+          e.stopPropagation();
+          const titleEl = item.querySelector('.session-title');
+          const renameBtn = item.querySelector('.session-rename-btn');
+          const currentName = titleEl.textContent;
+
+          const input = document.createElement('input');
+          input.className = 'session-rename-input';
+          input.value = currentName;
+          titleEl.replaceWith(input);
+          renameBtn.style.display = 'none';
+          input.focus();
+          input.select();
+
+          const commit = async () => {
+            const newName = input.value.trim();
+            if (newName && newName !== currentName) {
+              try {
+                await fetch('/api/rpc', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ type: 'set_session_name', name: newName }),
+                });
+              } catch (err) { /* silent */ }
+            }
+            const newTitle = document.createElement('div');
+            newTitle.className = 'session-title';
+            newTitle.title = newName || currentName;
+            newTitle.textContent = newName || currentName;
+            input.replaceWith(newTitle);
+            renameBtn.style.display = '';
+          };
+
+          input.addEventListener('blur', commit);
+          input.addEventListener('keydown', (ke) => {
+            if (ke.key === 'Enter') { ke.preventDefault(); input.blur(); }
+            if (ke.key === 'Escape') { input.value = currentName; input.blur(); }
+          });
         });
 
         sessionsDiv.appendChild(item);
