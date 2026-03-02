@@ -35,6 +35,10 @@
   --user-bubble: rgba(255, 245, 230, 0.06);
   --user-bubble-text: var(--text-primary);
 
+  /* Tool accent — deep aubergine */
+  --tool-accent: #4a2048;
+  --tool-accent-text: #9060a0;
+
   /* Borders — silk edges */
   --border: rgba(255, 255, 255, 0.07);
   --border-hover: rgba(255, 255, 255, 0.12);
@@ -93,6 +97,10 @@
   --accent-text: #a05e3e;
   --user-bubble: #b06a48;
   --user-bubble-text: white;
+
+  /* Tool accent — deep aubergine */
+  --tool-accent: #5c2860;
+  --tool-accent-text: #6b3570;
   --border: rgba(0, 0, 0, 0.06);
   --border-hover: rgba(0, 0, 0, 0.1);
   --border-bright: rgba(0, 0, 0, 0.15);
@@ -1316,7 +1324,7 @@ code {
 .tool-card {
   background: var(--bg-glass);
   border: 1px solid var(--border);
-  border-left: 2px solid var(--accent);
+  border-left: 2px solid var(--tool-accent);
   border-radius: var(--radius);
   margin: 2px 0;
   font-size: 13px;
@@ -1367,7 +1375,7 @@ code {
 
 .tool-name {
   font-weight: 600;
-  color: var(--accent-text);
+  color: var(--tool-accent-text);
   font-family: 'SF Mono', 'Menlo', 'Monaco', monospace;
   font-size: 11px;
 }
@@ -1393,7 +1401,7 @@ code {
 }
 
 .tool-status.pending { background: var(--bg-glass-strong); color: var(--text-dim); border: 1px solid var(--border); }
-.tool-status.streaming { background: var(--accent); color: white; animation: pulse 1.5s infinite; }
+.tool-status.streaming { background: var(--tool-accent); color: white; animation: pulse 1.5s infinite; }
 .tool-status.complete { background: rgba(52, 211, 153, 0.1); color: var(--success); border: 1px solid rgba(52, 211, 153, 0.2); }
 .tool-status.error { background: rgba(248, 113, 113, 0.1); color: var(--error); border: 1px solid rgba(248, 113, 113, 0.2); }
 
