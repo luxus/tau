@@ -26,13 +26,13 @@
   --text-ghost: rgba(255, 255, 255, 0.12);
 
   /* Accent — wine/burgundy */
-  --accent: #c47a5a;
-  --accent-glow: rgba(196, 122, 90, 0.2);
-  --accent-subtle: rgba(196, 122, 90, 0.1);
-  --accent-text: #d4916e;
+  --accent: #a0624a;
+  --accent-glow: rgba(160, 98, 74, 0.2);
+  --accent-subtle: rgba(160, 98, 74, 0.1);
+  --accent-text: #c07a5e;
 
   /* User bubble — warm dark grey */
-  --user-bubble: rgba(196, 122, 90, 0.08);
+  --user-bubble: rgba(160, 98, 74, 0.08);
   --user-bubble-text: var(--text-primary);
 
   /* Tool accent — muted plum */
@@ -73,9 +73,9 @@
   --duration: 0.2s;
 
   /* Gradient orbs — terracotta */
-  --orb-1: radial-gradient(900px circle at 10% 20%, rgba(196, 122, 90, 0.06), transparent 70%);
-  --orb-2: radial-gradient(800px circle at 90% 80%, rgba(170, 110, 80, 0.04), transparent 70%);
-  --orb-3: radial-gradient(700px circle at 50% 50%, rgba(140, 95, 70, 0.03), transparent 70%);
+  --orb-1: radial-gradient(900px circle at 10% 20%, rgba(160, 98, 74, 0.06), transparent 70%);
+  --orb-2: radial-gradient(800px circle at 90% 80%, rgba(140, 85, 65, 0.04), transparent 70%);
+  --orb-3: radial-gradient(700px circle at 50% 50%, rgba(120, 75, 55, 0.03), transparent 70%);
 }
 
 /* ─── Light Mode ─── */
