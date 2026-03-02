@@ -8,6 +8,7 @@ import { MessageRenderer } from './message-renderer.js';
 import { ToolCardRenderer } from './tool-card.js';
 import { DialogHandler } from './dialogs.js';
 import { SessionSidebar } from './session-sidebar.js';
+import { themes, applyTheme, getCurrentTheme } from './themes.js';
 
 // Initialize components
 const wsUrl = `ws://${window.location.host}/ws`;
@@ -1130,7 +1131,7 @@ wsClient.addEventListener('sessionSwitch', () => {
 // Theme / Settings
 // ═══════════════════════════════════════
 
-import { themes, applyTheme, getCurrentTheme } from './themes.js';
+
 
 const settingsBtn = document.getElementById('settings-btn');
 const settingsPanel = document.getElementById('settings-panel');

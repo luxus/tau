@@ -82,3 +82,27 @@ Standalone viewer for memoryd memory files (session cards, semantic/episodic mem
 
 - `pi install npm:tau-mirror` for cleaner install UX
 - Needs npm account setup
+
+## Context Window Visualiser
+
+Visual breakdown of what's eating your context. Stacked bar or treemap showing: system prompt, compaction summary, recent messages, tool results, thinking. See exactly where the 20% goes and what's using the other 80%. Helps you understand when compaction is coming and why.
+
+## Session Templates
+
+Start a new session pre-loaded with context for a specific project. "New Tau session", "New memoryd session" — each with its own CLAUDE.md, working directory, and maybe a starter prompt. Saves the "cd to project, remind agent of context" dance every time.
+
+## Quick Actions on Tool Results
+
+Right-click or hover menu on tool cards: re-run command, edit and re-run, copy output, expand/collapse. The tool cards are already there — making them interactive would be a big UX win.
+
+## PWA / Install to Home Screen
+
+Service worker + manifest so Tau can be "installed" on iOS/Android as a standalone app. No App Store needed. Gets you the full-screen experience and a home screen icon.
+
+## Multi-Model A/B Testing
+
+Send the same prompt to two models side by side and compare responses. Useful for evaluating whether a cheaper/faster model is good enough for a task. Split view with both responses streaming.
+
+## Live Terminal Embed
+
+Embedded terminal panel (xterm.js) showing real-time bash output from Pi's tool executions. The tool cards are a sanitised summary — sometimes you want to see the raw terminal output streaming live. Could be a toggle on individual tool cards ("show raw output") or a persistent panel. Data is already flowing through the WebSocket.
