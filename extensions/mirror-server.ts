@@ -44,6 +44,12 @@ const AUTH_USER = TAU_SETTINGS.user;
 const AUTH_PASS = TAU_SETTINGS.pass;
 const AUTH_CONFIGURED = !!(AUTH_USER && AUTH_PASS);
 let authEnabled = AUTH_CONFIGURED && TAU_SETTINGS.authEnabled !== false;
+const TAU_DEBUG = process.env.TAU_DEBUG === "1" || process.env.TAU_DEBUG === "true";
+
+function debugLog(...args: any[]) {
+  if (TAU_DEBUG) console.error(...args);
+}
+
 // @ts-ignore — __dirname is provided by jiti at runtime
 const STATIC_DIR = process.env.TAU_STATIC_DIR || findPublicDir();
 
@@ -152,7 +158,7 @@ function cleanupZombieInstances() {
         const tty = execSync(`ps -o tty= -p ${info.pid}`, { encoding: "utf8" }).trim();
         if (!tty || tty === "??" || tty === "-") {
           // No terminal — this is a zombie, kill it
-          console.log(`[Mirror] Killing zombie Tau instance (PID ${info.pid}, port ${info.port})`);
+          debugLog(`[Mirror] Killing zombie Tau instance (PID ${info.pid}, port ${info.port})`);
           process.kill(info.pid, "SIGTERM");
           try { fs.unlinkSync(path.join(INSTANCES_DIR, file)); } catch {}
         }
@@ -280,7 +286,7 @@ export default function (pi: ExtensionAPI) {
       stopServer();
       ctx.ui.setStatus("mirror", "");
       ctx.ui.notify("Tau mirror server stopped", "info");
-      console.log("[Mirror] Server stopped via /taustop");
+      debugLog("[Mirror] Server stopped via /taustop");
     },
   });
 
@@ -520,7 +526,7 @@ export default function (pi: ExtensionAPI) {
                 // Strip data URL prefix if accidentally included
                 const data = img.data.includes(",") ? img.data.split(",")[1] : img.data;
                 const mimeType = (validMimes.includes(img.mimeType) ? img.mimeType : "image/png") as "image/png" | "image/jpeg" | "image/gif" | "image/webp";
-                console.log(`[mirror-server] Image: mimeType=${mimeType}, dataLen=${data.length}, rawMimeType=${img.mimeType}`);
+                debugLog(`[mirror-server] Image: mimeType=${mimeType}, dataLen=${data.length}, rawMimeType=${img.mimeType}`);
                 const imageBlock = {
                   type: "image" as const,
                   data: data,
@@ -1481,7 +1487,6 @@ img{border-radius:12px}a{color:#b87a5c;font-size:18px;margin-top:16px}p{color:rg
     });
 
     wss.on("connection", (ws) => {
-      console.log("[Mirror] Browser client connected");
       clients.add(ws);
       (ws as any).isAlive = true;
 
@@ -1509,7 +1514,6 @@ img{border-radius:12px}a{color:#b87a5c;font-size:18px;margin-top:16px}p{color:rg
       });
 
       ws.on("close", () => {
-        console.log("[Mirror] Browser client disconnected");
         clients.delete(ws);
       });
 
@@ -1544,7 +1548,7 @@ img{border-radius:12px}a{color:#b87a5c;font-size:18px;margin-top:16px}p{color:rg
       });
       server!.once("error", (err: any) => {
         if (err.code === "EADDRINUSE" && port < PORT + maxAttempts) {
-          console.log(`[Mirror] Port ${port} in use, trying ${port + 1}...`);
+          debugLog(`[Mirror] Port ${port} in use, trying ${port + 1}...`);
           server!.removeAllListeners("error");
           tryListen(port + 1, maxAttempts);
         } else {
@@ -1597,7 +1601,7 @@ img{border-radius:12px}a{color:#b87a5c;font-size:18px;margin-top:16px}p{color:rg
 
       mirrorUrl = `http://${localIp}:${port}`;
       tailscaleUrl = tailscaleIp ? `http://${tailscaleIp}:${port}` : "";
-      console.log(`[Mirror] Tau mirror server running on ${mirrorUrl}${tailscaleUrl ? `  •  Tailscale: ${tailscaleUrl}` : ""}`);
+      debugLog(`[Mirror] Tau mirror server running on ${mirrorUrl}${tailscaleUrl ? `  •  Tailscale: ${tailscaleUrl}` : ""}`);
       ctx.ui.setStatus("mirror", `Mirror: ${localIp}:${port}${tailscaleIp ? ` • TS: ${tailscaleIp}:${port}` : ""}`);
 
       // Register this instance
@@ -1617,7 +1621,7 @@ img{border-radius:12px}a{color:#b87a5c;font-size:18px;margin-top:16px}p{color:rg
     latestCtx = ctx;
 
     if (!TAU_AUTO_START) {
-      console.log("[Mirror] Tau auto-start disabled (TAU_DISABLED=1). Use /tau-start to start manually.");
+      debugLog("[Mirror] Tau auto-start disabled (TAU_DISABLED=1). Use /tau-start to start manually.");
       return;
     }
 
@@ -1629,6 +1633,6 @@ img{border-radius:12px}a{color:#b87a5c;font-size:18px;margin-top:16px}p{color:rg
   // ═══════════════════════════════════════
   pi.on("session_shutdown", async () => {
     stopServer();
-    console.log("[Mirror] Server shut down");
+    debugLog("[Mirror] Server shut down");
   });
 }
