@@ -156,6 +156,7 @@ Clone and point the extension at the local static files:
 ```bash
 git clone https://github.com/deflating/tau.git
 cd tau
+npm install
 TAU_STATIC_DIR=$(pwd)/public pi
 ```
 
