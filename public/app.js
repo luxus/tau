@@ -40,6 +40,7 @@ const sidebarOverlay = document.getElementById('sidebar-overlay');
 
 const refreshSessionsBtn = document.getElementById('refresh-sessions-btn');
 const sessionSearchInput = document.getElementById('session-search-input');
+const liveFilterBtn = document.getElementById('live-filter-btn');
 const typingIndicator = document.getElementById('typing-indicator');
 
 const sessionCostEl = document.getElementById('session-cost');
@@ -65,6 +66,7 @@ let mirrorActiveSessionFile = null; // The live session file path from the TUI
 let viewingActiveSession = true; // Whether we're viewing the live session or a historical one
 let isMirrorMode = false; // Set when mirror_sync received
 let liveInstances = []; // All running Tau instances [{port, sessionFile, cwd}]
+let liveOnlySessions = false; // Sidebar filter toggle
 
 // File browser
 const fileSidebar = document.getElementById('file-sidebar');
@@ -1032,10 +1034,25 @@ refreshSessionsBtn.addEventListener('click', () => {
   }, { passive: true });
 })();
 
-// Session search
+// Session search / live filter
+function updateLiveFilterButton() {
+  if (!liveFilterBtn) return;
+  liveFilterBtn.classList.toggle('active', liveOnlySessions);
+  liveFilterBtn.setAttribute('aria-pressed', liveOnlySessions ? 'true' : 'false');
+  liveFilterBtn.title = liveOnlySessions ? 'Showing only live sessions' : 'Show only live sessions';
+}
+
 sessionSearchInput.addEventListener('input', () => {
   sidebar.setSearchQuery(sessionSearchInput.value);
 });
+
+liveFilterBtn?.addEventListener('click', () => {
+  liveOnlySessions = !liveOnlySessions;
+  sidebar.setLiveOnly(liveOnlySessions);
+  updateLiveFilterButton();
+});
+
+updateLiveFilterButton();
 
 async function newSession() {
   sessionTotalCost = 0;
@@ -1187,13 +1204,11 @@ function handleMirrorSync(data) {
 
 // Mark all live sessions in the sidebar with a green dot
 function updateMirrorLiveIndicator() {
-  const liveFiles = new Set(liveInstances.map(i => i.sessionFile));
+  const liveFiles = new Set(liveInstances.map((i) => i.sessionFile).filter(Boolean));
   // Also include the current mirror session
   if (mirrorActiveSessionFile) liveFiles.add(mirrorActiveSessionFile);
 
-  document.querySelectorAll('.session-item').forEach(el => {
-    el.classList.toggle('mirror-live', liveFiles.has(el.dataset.filePath));
-  });
+  sidebar.setLiveSessionFiles(Array.from(liveFiles));
 }
 
 // Poll for running instances to mark all live sessions

@@ -468,6 +468,17 @@ body {
   -webkit-app-region: no-drag;
 }
 
+.live-filter-btn {
+  -webkit-app-region: no-drag;
+  flex-shrink: 0;
+}
+
+.live-filter-btn.active {
+  background: var(--accent-subtle);
+  color: var(--accent-text);
+  box-shadow: var(--shadow-inset);
+}
+
 .icon-btn,
 .new-session-btn {
   width: 28px;

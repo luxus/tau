@@ -10,6 +10,8 @@ export class SessionSidebar {
     this.projects = [];
     this.collapsedProjects = new Set();
     this.searchQuery = '';
+    this.liveOnly = false;
+    this.liveSessionFiles = new Set();
     this.favourites = JSON.parse(localStorage.getItem('tau-favourites') || '[]');
     this.contextMenu = null;
 
@@ -76,6 +78,33 @@ export class SessionSidebar {
     }
   }
 
+  setLiveOnly(enabled) {
+    this.liveOnly = !!enabled;
+    if (this.searchQuery && this._searchResults?.length) {
+      this.renderSearchResults();
+    }
+    this.applySearch();
+  }
+
+  setLiveSessionFiles(filePaths) {
+    this.liveSessionFiles = new Set((filePaths || []).filter(Boolean));
+    this.updateLiveMarkers();
+    if (this.searchQuery && this._searchResults?.length) {
+      this.renderSearchResults();
+    }
+    this.applySearch();
+  }
+
+  isLiveSession(filePath) {
+    return this.liveSessionFiles.has(filePath);
+  }
+
+  updateLiveMarkers() {
+    this.container.querySelectorAll('.session-item').forEach((item) => {
+      item.classList.toggle('mirror-live', this.isLiveSession(item.dataset.filePath));
+    });
+  }
+
   async fullTextSearch(query) {
     // Don't search if query changed since debounce
     if (query !== this.searchQuery) return;
@@ -99,24 +128,33 @@ export class SessionSidebar {
     const existing = this.container.querySelector('.search-results-group');
     if (existing) existing.remove();
 
+    const filteredResults = this.liveOnly
+      ? this._searchResults.filter((result) => this.isLiveSession(result.filePath))
+      : this._searchResults;
+
+    if (filteredResults.length === 0) return;
+
     const group = document.createElement('div');
     group.className = 'search-results-group';
 
     const header = document.createElement('div');
     header.className = 'project-header search-results-header';
-    header.innerHTML = `<span>🔍</span> <span>Message matches</span> <span class="project-count">${this._searchResults.length}</span>`;
+    header.innerHTML = `<span>🔍</span> <span>Message matches</span> <span class="project-count">${filteredResults.length}</span>`;
     group.appendChild(header);
 
     const sessionsDiv = document.createElement('div');
     sessionsDiv.className = 'project-sessions';
 
-    for (const result of this._searchResults) {
+    for (const result of filteredResults) {
       const item = document.createElement('div');
       item.className = 'session-item search-result-item';
       item.dataset.filePath = result.filePath;
 
       if (result.filePath === this.activeSessionFile) {
         item.classList.add('active');
+      }
+      if (this.isLiveSession(result.filePath)) {
+        item.classList.add('mirror-live');
       }
 
       const title = result.sessionName || result.firstMessage || 'Untitled';
@@ -161,11 +199,35 @@ export class SessionSidebar {
   }
 
   applySearch() {
+    const matchesFilters = (item, includeSearch = true) => {
+      const filePath = item.dataset.filePath;
+      const liveMatches = !this.liveOnly || this.isLiveSession(filePath);
+      if (!liveMatches) return false;
+      if (!includeSearch || !this.searchQuery) return true;
+      const title = (item.querySelector('.session-title')?.textContent || '').toLowerCase();
+      return title.includes(this.searchQuery);
+    };
+
     if (!this.searchQuery) {
-      this.container.querySelectorAll('.session-item').forEach(el => el.classList.remove('hidden'));
-      this.container.querySelectorAll('.project-group').forEach(el => el.style.display = '');
+      this.container.querySelectorAll('.session-item').forEach((item) => {
+        item.classList.toggle('hidden', !matchesFilters(item, false));
+      });
+
       const favSection = this.container.querySelector('.favourites-group');
-      if (favSection) favSection.style.display = '';
+      if (favSection) {
+        const hasVisible = Array.from(favSection.querySelectorAll('.session-item')).some(
+          (item) => !item.classList.contains('hidden'),
+        );
+        favSection.style.display = hasVisible ? '' : 'none';
+      }
+
+      this.container.querySelectorAll('.project-group').forEach((group) => {
+        const hasVisible = Array.from(group.querySelectorAll('.session-item')).some(
+          (item) => !item.classList.contains('hidden'),
+        );
+        group.style.display = hasVisible ? '' : 'none';
+      });
+
       // Remove full-text results
       const searchGroup = this.container.querySelector('.search-results-group');
       if (searchGroup) searchGroup.remove();
@@ -176,25 +238,35 @@ export class SessionSidebar {
     const favSection = this.container.querySelector('.favourites-group');
     if (favSection) {
       let hasVisible = false;
-      favSection.querySelectorAll('.session-item').forEach(item => {
-        const title = (item.querySelector('.session-title')?.textContent || '').toLowerCase();
-        const matches = title.includes(this.searchQuery);
+      favSection.querySelectorAll('.session-item').forEach((item) => {
+        const matches = matchesFilters(item, true);
         item.classList.toggle('hidden', !matches);
         if (matches) hasVisible = true;
       });
       favSection.style.display = hasVisible ? '' : 'none';
     }
 
-    this.container.querySelectorAll('.project-group').forEach(group => {
+    this.container.querySelectorAll('.project-group').forEach((group) => {
       let hasVisible = false;
-      group.querySelectorAll('.session-item').forEach(item => {
-        const title = (item.querySelector('.session-title')?.textContent || '').toLowerCase();
-        const matches = title.includes(this.searchQuery);
+      group.querySelectorAll('.session-item').forEach((item) => {
+        const matches = matchesFilters(item, true);
         item.classList.toggle('hidden', !matches);
         if (matches) hasVisible = true;
       });
       group.style.display = hasVisible ? '' : 'none';
     });
+
+    // Full-text search results are already query-matched; only apply live filter.
+    const searchGroup = this.container.querySelector('.search-results-group');
+    if (searchGroup) {
+      let hasVisible = false;
+      searchGroup.querySelectorAll('.session-item').forEach((item) => {
+        const matches = matchesFilters(item, false);
+        item.classList.toggle('hidden', !matches);
+        if (matches) hasVisible = true;
+      });
+      searchGroup.style.display = hasVisible ? '' : 'none';
+    }
   }
 
   setActive(filePath) {
@@ -321,6 +393,9 @@ export class SessionSidebar {
     if (session.filePath === this.activeSessionFile) {
       item.classList.add('active');
     }
+    if (this.isLiveSession(session.filePath)) {
+      item.classList.add('mirror-live');
+    }
 
     const title = session.name || session.firstMessage || 'Empty session';
     const time = this.formatTime(session.timestamp);
@@ -419,7 +494,7 @@ export class SessionSidebar {
       this.container.appendChild(group);
     }
 
-    if (this.searchQuery) this.applySearch();
+    this.applySearch();
   }
 
   formatTime(isoTimestamp) {
