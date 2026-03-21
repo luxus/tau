@@ -18,12 +18,15 @@ import * as path from "node:path";
 import QRCode from "qrcode";
 
 // Load tau settings from ~/.pi/agent/settings.json (falls back to env vars)
-function loadTauSettings(): { port: number; autoStart: boolean; user: string; pass: string; authEnabled?: boolean; projectsDir?: string } {
+function loadTauSettings(): { port: number; autoStart: boolean; user: string; pass: string; authEnabled?: boolean; projectsDir?: string; maxPortAttempts: number } {
   let settings: any = {};
   try {
     const settingsPath = path.join(process.env.HOME || "~", ".pi/agent/settings.json");
     settings = JSON.parse(fs.readFileSync(settingsPath, "utf8")).tau || {};
   } catch {}
+
+  const parsedMaxAttempts = parseInt(process.env.TAU_MIRROR_MAX_PORT_ATTEMPTS || settings.maxPortAttempts || "200", 10);
+
   return {
     port: parseInt(process.env.TAU_MIRROR_PORT || settings.port || "3001"),
     autoStart: !(
@@ -34,11 +37,13 @@ function loadTauSettings(): { port: number; autoStart: boolean; user: string; pa
     pass: process.env.TAU_PASS || settings.pass || "",
     authEnabled: settings.authEnabled,
     projectsDir: process.env.TAU_PROJECTS_DIR || settings.projectsDir,
+    maxPortAttempts: Number.isFinite(parsedMaxAttempts) && parsedMaxAttempts > 0 ? parsedMaxAttempts : 200,
   };
 }
 
 const TAU_SETTINGS = loadTauSettings();
 const PORT = TAU_SETTINGS.port;
+const MAX_PORT_ATTEMPTS = TAU_SETTINGS.maxPortAttempts;
 const TAU_AUTO_START = TAU_SETTINGS.autoStart;
 const AUTH_USER = TAU_SETTINGS.user;
 const AUTH_PASS = TAU_SETTINGS.pass;
@@ -1542,7 +1547,7 @@ img{border-radius:12px}a{color:#b87a5c;font-size:18px;margin-top:16px}p{color:rg
       }
     }, 20000);
 
-    const tryListen = (port: number, maxAttempts = 10) => {
+    const tryListen = (port: number, maxAttempts = MAX_PORT_ATTEMPTS) => {
       server!.listen(port, "0.0.0.0", () => {
         onListening(port);
       });
@@ -1552,7 +1557,7 @@ img{border-radius:12px}a{color:#b87a5c;font-size:18px;margin-top:16px}p{color:rg
           server!.removeAllListeners("error");
           tryListen(port + 1, maxAttempts);
         } else {
-          console.error(`[Mirror] Failed to start server:`, err.message);
+          console.error(`[Mirror] Failed to start server after ${maxAttempts} attempts from ${PORT}:`, err.message);
         }
       });
     };
