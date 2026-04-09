@@ -827,8 +827,23 @@ async function fetchModelInfo() {
 }
 
 function updateModelLabel() {
-  const shortName = currentModelId.replace(/^claude-/, '').replace(/-\d{8}$/, '');
-  modelDropdownLabel.textContent = shortName || 'model';
+  let displayName = currentModelId;
+  
+  // Extract just the model name from provider paths (e.g., accounts/fireworks/routers/kimi-k2p5-turbo -> kimi-k2p5-turbo)
+  const lastSlash = displayName.lastIndexOf('/');
+  if (lastSlash !== -1) {
+    displayName = displayName.slice(lastSlash + 1);
+  }
+  
+  // Remove claude- prefix for cleaner display
+  displayName = displayName.replace(/^claude-/, '');
+  
+  // Remove date suffixes like -20241022
+  displayName = displayName.replace(/-\d{8}$/, '');
+  
+  // Set truncated text and full name as tooltip
+  modelDropdownLabel.textContent = displayName || 'model';
+  modelDropdownLabel.title = currentModelId; // Full name on hover
 }
 
 function toggleModelDropdown() {

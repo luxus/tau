@@ -1126,6 +1126,13 @@ body {
   transition: all var(--duration) var(--ease);
   white-space: nowrap;
   max-width: 200px;
+  overflow: hidden;
+}
+
+.model-dropdown-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .model-dropdown-btn:hover {
